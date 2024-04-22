@@ -25,6 +25,9 @@ use elliptic_curve::{
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
+#[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+use powdr_riscv_runtime::ec::{add_u8_le, double_u8_le};
+
 #[rustfmt::skip]
 const ENDOMORPHISM_BETA: FieldElement = FieldElement::from_bytes_unchecked(&[
     0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10,
@@ -94,6 +97,30 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add(&self, other: &ProjectivePoint) -> ProjectivePoint {
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            // call when the values are normalized, into powdr ec operations
+            if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
+                // z being ONE means value is not identity
+                let self_x: [u8; 32] = self.x.to_bytes_le().into();
+                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let other_x: [u8; 32] = other.x.to_bytes_le().into();
+                let other_y: [u8; 32] = other.y.to_bytes_le().into();
+
+                let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+                let mut res = *self;
+                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                return res;
+            }
+
+            if self.is_identity().into() {
+                return *other;
+            } else if other.is_identity().into() {
+                return *self;
+            }
+        }
+
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 7).
 
@@ -138,6 +165,25 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add_mixed(&self, other: &AffinePoint) -> ProjectivePoint {
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            if other.is_identity().into() {
+                return *self;
+            } else if self.z == FieldElement::ONE {
+                // z being ONE means value is not identity
+                let self_x: [u8; 32] = self.x.to_bytes_le().into();
+                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let other_x: [u8; 32] = other.x.to_bytes_le().into();
+                let other_y: [u8; 32] = other.y.to_bytes_le().into();
+
+                let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+                let mut res = *self;
+                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                return res;
+            }
+        }
+
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 8).
 
@@ -176,6 +222,24 @@ impl ProjectivePoint {
     /// Doubles this point.
     #[inline]
     pub fn double(&self) -> ProjectivePoint {
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            if self.z == FieldElement::ONE {
+                // z being ONE means value is not identity
+                let self_x: [u8; 32] = self.x.to_bytes_le().into();
+                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let (res_x, res_y) = double_u8_le(self_x, self_y);
+                let mut res = *self;
+                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                return res;
+            }
+
+            if self.is_identity().into() {
+                return *self;
+            }
+        }
+
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 9).
 

@@ -5,6 +5,7 @@
 use cfg_if::cfg_if;
 
 cfg_if! {
+
     if #[cfg(target_pointer_width = "32")] {
         mod field_10x26;
     } else if #[cfg(target_pointer_width = "64")] {
@@ -99,9 +100,22 @@ impl FieldElement {
         FieldElementImpl::from_bytes(bytes).map(Self)
     }
 
+    /// Attempts to parse the given byte array as an SEC1-encoded field element (in little-endian!).
+    /// Does not check the result for being in the correct range.
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
+        Self(FieldElementImpl::from_bytes_unchecked_le(bytes))
+    }
+
     /// Convert a `u64` to a field element.
     pub const fn from_u64(w: u64) -> Self {
         Self(FieldElementImpl::from_u64(w))
+    }
+
+    /// Returns the SEC1 encoding (in little-endian!) of this field element.
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub fn to_bytes_le(self) -> FieldBytes {
+        self.0.normalize().to_bytes_le()
     }
 
     /// Returns the SEC1 encoding of this field element.

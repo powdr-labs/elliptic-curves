@@ -66,6 +66,12 @@ impl FieldElementImpl {
         Self::new_normalized(&value)
     }
 
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
+        let value = FieldElementUnsafeImpl::from_bytes_unchecked_le(bytes);
+        Self::new_normalized(&value)
+    }
+
     pub(crate) const fn from_u64(val: u64) -> Self {
         Self::new_normalized(&FieldElementUnsafeImpl::from_u64(val))
     }
@@ -78,6 +84,12 @@ impl FieldElementImpl {
     pub fn to_bytes(self) -> FieldBytes {
         debug_assert!(self.normalized);
         self.value.to_bytes()
+    }
+
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub fn to_bytes_le(self) -> FieldBytes {
+        debug_assert!(self.normalized);
+        self.value.to_bytes_le()
     }
 
     pub fn normalize_weak(&self) -> Self {

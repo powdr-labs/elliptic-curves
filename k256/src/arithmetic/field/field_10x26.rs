@@ -68,6 +68,86 @@ impl FieldElement10x26 {
         Self([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9])
     }
 
+    /// Attempts to parse the given byte array as an SEC1-encoded field element (but little endian!).
+    /// Does not check the result for being in the correct range.
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
+        // TODO: original conversion code is cheaper in some cases, not sure why.
+        let w0 = u32::from_le_bytes(
+            bytes[0..4]
+                .try_into()
+                .expect("Conversion should have worked"),
+        ) & 0x03ffffff;
+        // let w0 = (bytes[0] as u32)
+        //     | ((bytes[1] as u32) << 8)
+        //     | ((bytes[2] as u32) << 16)
+        //     | (((bytes[3] & 0x3) as u32) << 24);
+        // let w1 = (u32::from_le_bytes(bytes[3..7].try_into().unwrap()) >> 2) & 0x03ffffff;
+        let w1 = (((bytes[3] >> 2) as u32) & 0x3f)
+            | ((bytes[4] as u32) << 6)
+            | ((bytes[5] as u32) << 14)
+            | (((bytes[6] & 0xf) as u32) << 22);
+        // let w2 = (u32::from_le_bytes(bytes[6..10].try_into().unwrap()) >> 4) & 0x03ffffff;
+        let w2 = (((bytes[6] >> 4) as u32) & 0xf)
+            | ((bytes[7] as u32) << 4)
+            | ((bytes[8] as u32) << 12)
+            | (((bytes[9] & 0x3f) as u32) << 20);
+        let w3 = (u32::from_le_bytes(
+            bytes[9..13]
+                .try_into()
+                .expect("Conversion should have worked"),
+        ) >> 6)
+            & 0x03ffffff;
+        // let w3 = (((bytes[9] >> 6) as u32) & 0x3)
+        //     | ((bytes[10] as u32) << 2)
+        //     | ((bytes[11] as u32) << 10)
+        //     | ((bytes[12] as u32) << 18);
+        let w4 = u32::from_le_bytes(
+            bytes[13..17]
+                .try_into()
+                .expect("Conversion should have worked"),
+        ) & 0x03ffffff;
+        // let w4 = (bytes[13] as u32)
+        //     | ((bytes[14] as u32) << 8)
+        //     | ((bytes[15] as u32) << 16)
+        //     | (((bytes[16] & 0x3) as u32) << 24);
+        // let w5 = (u32::from_le_bytes(bytes[16..20].try_into().unwrap()) >> 2) & 0x03ffffff;
+        let w5 = (((bytes[16] >> 2) as u32) & 0x3f)
+            | ((bytes[17] as u32) << 6)
+            | ((bytes[18] as u32) << 14)
+            | (((bytes[19] & 0xf) as u32) << 22);
+        // let w6 = (u32::from_le_bytes(bytes[19..23].try_into().unwrap()) >> 4) & 0x03ffffff;
+        let w6 = (((bytes[19] >> 4) as u32) & 0xf)
+            | ((bytes[20] as u32) << 4)
+            | ((bytes[21] as u32) << 12)
+            | (((bytes[22] & 0x3f) as u32) << 20);
+        let w7 = (u32::from_le_bytes(
+            bytes[22..26]
+                .try_into()
+                .expect("Conversion should have worked"),
+        ) >> 6)
+            & 0x03ffffff;
+        // let w7 = (((bytes[22] >> 6) as u32) & 0x3)
+        //     | ((bytes[23] as u32) << 2)
+        //     | ((bytes[24] as u32) << 10)
+        //     | ((bytes[25] as u32) << 18);
+        let w8 = u32::from_le_bytes(
+            bytes[26..30]
+                .try_into()
+                .expect("Conversion should have worked"),
+        ) & 0x03ffffff;
+        // let w8 = (bytes[26] as u32)
+        //     | ((bytes[27] as u32) << 8)
+        //     | ((bytes[28] as u32) << 16)
+        //     | (((bytes[29] & 0x3) as u32) << 24);
+        // let w9 = (u32::from_le_bytes(bytes[9..13].try_into().unwrap()) >> 6) & 0x03ffffff;
+        let w9 = (((bytes[29] >> 2) as u32) & 0x3f)
+            | ((bytes[30] as u32) << 6)
+            | ((bytes[31] as u32) << 14);
+
+        Self([w0, w1, w2, w3, w4, w5, w6, w7, w8, w9])
+    }
+
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     ///
     /// Returns None if the byte array does not contain a big-endian integer in the range
@@ -78,6 +158,17 @@ impl FieldElement10x26 {
 
         CtOption::new(res, !overflow)
     }
+
+    // /// Attempts to parse the given byte array as an SEC1-encoded field element (but little-endian!).
+    // ///
+    // /// Returns None if the byte array does not contain a big-endian integer in the range
+    // /// [0, p).
+    // pub fn from_bytes_le(bytes: &FieldBytes) -> CtOption<Self> {
+    //     let res = Self::from_bytes_unchecked_le(bytes.as_ref());
+    //     let overflow = res.get_overflow();
+
+    //     CtOption::new(res, !overflow)
+    // }
 
     pub const fn from_u64(val: u64) -> Self {
         let w0 = (val as u32) & 0x3FFFFFF;
@@ -122,6 +213,45 @@ impl FieldElement10x26 {
         r[29] = (self.0[0] >> 16) as u8;
         r[30] = (self.0[0] >> 8) as u8;
         r[31] = self.0[0] as u8;
+        r
+    }
+
+    /// Returns the SEC1 encoding of this field element (in little-endian!).
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub fn to_bytes_le(self) -> FieldBytes {
+        let mut r = FieldBytes::default();
+        r[0] = self.0[0] as u8;
+        r[1] = (self.0[0] >> 8) as u8;
+        r[2] = (self.0[0] >> 16) as u8;
+        r[3] = ((self.0[1] as u8 & 0x3fu8) << 2) | ((self.0[0] >> 24) as u8 & 0x3u8);
+        r[4] = (self.0[1] >> 6) as u8;
+        r[5] = (self.0[1] >> 14) as u8;
+        r[6] = ((self.0[2] as u8 & 0xfu8) << 4) | ((self.0[1] >> 22) as u8 & 0xfu8);
+        r[7] = (self.0[2] >> 4) as u8;
+        r[8] = (self.0[2] >> 12) as u8;
+        r[9] = ((self.0[3] as u8 & 0x3u8) << 6) | ((self.0[2] >> 20) as u8 & 0x3fu8);
+        r[10] = (self.0[3] >> 2) as u8;
+        r[11] = (self.0[3] >> 10) as u8;
+        r[12] = (self.0[3] >> 18) as u8;
+        r[13] = self.0[4] as u8;
+        r[14] = (self.0[4] >> 8) as u8;
+        r[15] = (self.0[4] >> 16) as u8;
+        r[16] = ((self.0[5] as u8 & 0x3fu8) << 2) | ((self.0[4] >> 24) as u8 & 0x3u8);
+        r[17] = (self.0[5] >> 6) as u8;
+        r[18] = (self.0[5] >> 14) as u8;
+        r[19] = ((self.0[6] as u8 & 0xfu8) << 4) | ((self.0[5] >> 22) as u8 & 0xfu8);
+        r[20] = (self.0[6] >> 4) as u8;
+        r[21] = (self.0[6] >> 12) as u8;
+        r[22] = ((self.0[7] as u8 & 0x3u8) << 6) | ((self.0[6] >> 20) as u8 & 0x3fu8);
+        r[23] = (self.0[7] >> 2) as u8;
+        r[24] = (self.0[7] >> 10) as u8;
+        r[25] = (self.0[7] >> 18) as u8;
+        r[26] = self.0[8] as u8;
+        r[27] = (self.0[8] >> 8) as u8;
+        r[28] = (self.0[8] >> 16) as u8;
+        r[29] = ((self.0[9] as u8 & 0x3Fu8) << 2) | ((self.0[8] >> 24) as u8 & 0x3);
+        r[30] = (self.0[9] >> 6) as u8;
+        r[31] = (self.0[9] >> 14) as u8;
         r
     }
 
