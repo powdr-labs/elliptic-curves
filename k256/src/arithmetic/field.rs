@@ -105,7 +105,7 @@ impl FieldElement {
     /// Does not check the result for being in the correct range.
     pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
         // Self(FieldElementImpl::from_bytes_unchecked_le(bytes))
-        Self(FieldElementImpl::from_bytes_unchecked(bytes))
+        Self(FieldElementImpl::from_bytes_unchecked_le(bytes))
     }
 
     /// Convert a `u64` to a field element.

@@ -41,6 +41,12 @@ impl FieldElement8x32R0 {
         Self(U256::from_be_slice(&bytes.as_slice()))
     }
 
+    /// Attempts to parse the given byte array as an SEC1-encoded field element (but little endian!).
+    /// Does not check the result for being in the correct range.
+    pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
+        Self(U256::from_le_slice(&bytes.as_slice()))
+    }
+
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     ///
     /// Returns None if the byte array does not contain a big-endian integer in the range
