@@ -2,6 +2,7 @@
 
 #![allow(clippy::assign_op_pattern, clippy::op_ref)]
 
+/*
 use cfg_if::cfg_if;
 
 cfg_if! {
@@ -31,6 +32,10 @@ cfg_if! {
         }
     }
 }
+*/
+
+mod field_8x32_risc0;
+use field_8x32_risc0::FieldElement8x32R0 as FieldElementImpl;
 
 use crate::FieldBytes;
 use core::{
@@ -118,6 +123,12 @@ impl FieldElement {
         self.0.normalize().to_bytes_le()
     }
 
+    /// Convert a `i64` to a field element.
+    /// Returned value may be only weakly normalized.
+    pub const fn from_i64(w: i64) -> Self {
+        Self(FieldElementImpl::from_i64(w))
+    }
+
     /// Returns the SEC1 encoding of this field element.
     pub fn to_bytes(self) -> FieldBytes {
         self.0.normalize().to_bytes()
@@ -155,7 +166,7 @@ impl FieldElement {
     /// Returns 2*self.
     /// Doubles the magnitude.
     pub fn double(&self) -> Self {
-        Self(self.0.add(&(self.0)))
+        self.mul_single(2)
     }
 
     /// Returns self * rhs mod p
@@ -372,6 +383,12 @@ impl Eq for FieldElement {}
 impl From<u64> for FieldElement {
     fn from(k: u64) -> Self {
         Self(FieldElementImpl::from_u64(k))
+    }
+}
+
+impl From<i64> for FieldElement {
+    fn from(k: i64) -> Self {
+        Self(FieldElementImpl::from_i64(k))
     }
 }
 

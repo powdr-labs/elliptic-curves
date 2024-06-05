@@ -25,6 +25,8 @@ use elliptic_curve::{
     Curve, ScalarPrimitive,
 };
 
+use powdr_riscv_runtime::arith::{modmul_256_u8_le, modmul_256_u32_le};
+
 #[cfg(feature = "bits")]
 use {crate::ScalarBits, elliptic_curve::group::ff::PrimeFieldBits};
 
@@ -109,12 +111,28 @@ impl Scalar {
 
     /// Modulo multiplies two scalars.
     pub fn mul(&self, rhs: &Scalar) -> Scalar {
-        WideScalar::mul_wide(self, rhs).reduce()
+        let result = Self(U256::from_words(
+            modmul_256_u32_le(
+                self.0.to_words(),
+                rhs.0.to_words(),
+                ORDER.to_words(),
+            ) // the remainder
+        ));
+        // our asm doesn't guarantee full modulus reduction, so it's asserted at the rust level for soundness
+        // the honest prover should provide a remainder that's reduced already, so this assertion should never fail
+        assert!(bool::from(result.0.ct_lt(&ORDER))); 
+        result
     }
 
     /// Modulo squares the scalar.
     pub fn square(&self) -> Self {
         self.mul(self)
+    }
+
+    #[inline(always)]
+    fn normalize(&self) -> Self {
+        assert!(bool::from(self.0.ct_lt(&ORDER)));
+        self.clone()
     }
 
     /// Right shifts the scalar.
@@ -432,6 +450,8 @@ impl Invert for Scalar {
     /// sidechannels.
     #[allow(non_snake_case)]
     fn invert_vartime(&self) -> CtOption<Self> {
+        return self.invert();
+
         let mut u = *self;
         let mut v = Self::from_uint_unchecked(Secp256k1::ORDER);
         let mut A = Self::ONE;
