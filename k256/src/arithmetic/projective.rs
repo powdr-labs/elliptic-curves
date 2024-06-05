@@ -25,7 +25,7 @@ use elliptic_curve::{
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-use powdr_riscv_runtime::ec::{add_u8_le, double_u8_le};
+use powdr_riscv_runtime::{ec::{add_u8_le, double_u8_le}, print};
 
 #[rustfmt::skip]
 const ENDOMORPHISM_BETA: FieldElement = FieldElement::from_bytes_unchecked(&[
@@ -104,10 +104,27 @@ impl ProjectivePoint {
             let other_x: [u8; 32] = other.x.to_bytes_le().into();
             let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
+            print!("START k256 ADD: \n");
+
+            print!("self_x: {:?}\n", self_x);
+            print!("self_y: {:?}\n", self_y);
+            print!("other_x: {:?}\n", other_x);
+            print!("other_y: {:?}\n", other_y);
+
             let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+
+            print!("res_x: {:?}\n", res_x);
+            print!("res_y: {:?}\n", res_y);
+
             let mut res = *self;
             res.x = FieldElement::from_bytes_unchecked_le(&res_x);
             res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+
+            print!("res.x: {:?}\n", res.x);
+            print!("res.y: {:?}\n", res.y);
+
+            print!("END k256 ADD: \n");
+
             return res;
         }
 
