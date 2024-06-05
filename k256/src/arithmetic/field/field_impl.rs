@@ -8,11 +8,13 @@ use elliptic_curve::{
     zeroize::Zeroize,
 };
 
-#[cfg(target_pointer_width = "32")]
-use super::field_10x26::FieldElement10x26 as FieldElementUnsafeImpl;
+// #[cfg(target_pointer_width = "32")]
+// use super::field_10x26::FieldElement10x26 as FieldElementUnsafeImpl;
 
-#[cfg(target_pointer_width = "64")]
-use super::field_5x52::FieldElement5x52 as FieldElementUnsafeImpl;
+// #[cfg(target_pointer_width = "64")]
+// use super::field_5x52::FieldElement5x52 as FieldElementUnsafeImpl;
+
+use super::field_8x32_risc0::FieldElement8x32R0 as FieldElementUnsafeImpl;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FieldElementImpl {
@@ -56,7 +58,7 @@ impl FieldElementImpl {
         debug_assert!(magnitude <= FieldElementUnsafeImpl::max_magnitude());
         Self {
             value: *value,
-            magnitude,
+            magnitude: 1,
             normalized: false,
         }
     }
@@ -68,6 +70,12 @@ impl FieldElementImpl {
 
     pub(crate) const fn from_u64(val: u64) -> Self {
         Self::new_normalized(&FieldElementUnsafeImpl::from_u64(val))
+    }
+
+    /// Convert a `i64` to a field element.
+    /// Returned value may be only weakly normalized.
+    pub(crate) const fn from_i64(w: i64) -> Self {
+        Self::new_weak_normalized(&FieldElementUnsafeImpl::from_i64(w))
     }
 
     pub fn from_bytes(bytes: &FieldBytes) -> CtOption<Self> {

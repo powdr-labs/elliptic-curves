@@ -2,34 +2,36 @@
 
 #![allow(clippy::assign_op_pattern, clippy::op_ref)]
 
-use cfg_if::cfg_if;
+// use cfg_if::cfg_if;
 
-cfg_if! {
-    if #[cfg(target_pointer_width = "32")] {
-        mod field_10x26;
-    } else if #[cfg(target_pointer_width = "64")] {
-        mod field_5x52;
-    } else {
-        compile_error!("unsupported target word size (i.e. target_pointer_width)");
-    }
-}
+// cfg_if! {
+//     if #[cfg(target_pointer_width = "32")] {
+//         mod field_10x26;
+//     } else if #[cfg(target_pointer_width = "64")] {
+//         mod field_5x52;
+//     } else {
+//         compile_error!("unsupported target word size (i.e. target_pointer_width)");
+//     }
+// }
+mod field_8x32_risc0;
+use field_8x32_risc0::FieldElement8x32R0 as FieldElementImpl;
 
-cfg_if! {
-    if #[cfg(debug_assertions)] {
-        mod field_impl;
-        use field_impl::FieldElementImpl;
-    } else {
-        cfg_if! {
-            if #[cfg(target_pointer_width = "32")] {
-                use field_10x26::FieldElement10x26 as FieldElementImpl;
-            } else if #[cfg(target_pointer_width = "64")] {
-                use field_5x52::FieldElement5x52 as FieldElementImpl;
-            } else {
-                compile_error!("unsupported target word size (i.e. target_pointer_width)");
-            }
-        }
-    }
-}
+// cfg_if! {
+//     if #[cfg(debug_assertions)] {
+//         mod field_impl;
+//         use field_impl::FieldElementImpl;
+//     } else {
+//         cfg_if! {
+//             if #[cfg(target_pointer_width = "32")] {
+//                 use field_10x26::FieldElement10x26 as FieldElementImpl;
+//             } else if #[cfg(target_pointer_width = "64")] {
+//                 use field_5x52::FieldElement5x52 as FieldElementImpl;
+//             } else {
+//                 compile_error!("unsupported target word size (i.e. target_pointer_width)");
+//             }
+//         }
+//     }
+// }
 
 use crate::FieldBytes;
 use core::{
@@ -102,7 +104,8 @@ impl FieldElement {
     /// Attempts to parse the given byte array as an SEC1-encoded field element (in little-endian!).
     /// Does not check the result for being in the correct range.
     pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
-        Self(FieldElementImpl::from_bytes_unchecked_le(bytes))
+        // Self(FieldElementImpl::from_bytes_unchecked_le(bytes))
+        Self(FieldElementImpl::from_bytes_unchecked(bytes))
     }
 
     /// Convert a `u64` to a field element.
@@ -113,6 +116,13 @@ impl FieldElement {
     /// Returns the SEC1 encoding (in little-endian!) of this field element.
     pub fn to_bytes_le(self) -> FieldBytes {
         self.0.normalize().to_bytes_le()
+        // self.0.normalize().to_bytes()
+    }
+
+    /// Convert a `i64` to a field element.
+    /// Returned value may be only weakly normalized.
+    pub const fn from_i64(w: i64) -> Self {
+        Self(FieldElementImpl::from_i64(w))
     }
 
     /// Returns the SEC1 encoding of this field element.
@@ -152,7 +162,7 @@ impl FieldElement {
     /// Returns 2*self.
     /// Doubles the magnitude.
     pub fn double(&self) -> Self {
-        Self(self.0.add(&(self.0)))
+        self.mul_single(2)
     }
 
     /// Returns self * rhs mod p
@@ -368,6 +378,12 @@ impl Eq for FieldElement {}
 impl From<u64> for FieldElement {
     fn from(k: u64) -> Self {
         Self(FieldElementImpl::from_u64(k))
+    }
+}
+
+impl From<i64> for FieldElement {
+    fn from(k: i64) -> Self {
+        Self(FieldElementImpl::from_i64(k))
     }
 }
 
