@@ -111,11 +111,11 @@ impl Scalar {
 
     /// Modulo multiplies two scalars.
     pub fn mul(&self, rhs: &Scalar) -> Scalar {
-        let result = Self(U256::from_le_bytes(
+        let result = Self(U256::from_words(
             modmul_256_u32_le(
-                U256::to_le_bytes(&self.0),
-                U256::to_le_bytes(&rhs.0),
-                U256::to_le_bytes(&ORDER),
+                self.0.to_words(),
+                rhs.0.to_words(),
+                ORDER.to_words(),
             ) // the remainder
         ));
         // our asm doesn't guarantee full modulus reduction, so it's asserted at the rust level for soundness
