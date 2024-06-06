@@ -8,7 +8,7 @@ use elliptic_curve::{
     zeroize::Zeroize,
     bigint::Encoding,
 };
-use powdr_riscv_runtime::arith::modmul_256_u8_le;
+use powdr_riscv_runtime::arith::{modmul_256_u32_le, modmul_256_u8_le};
 // use elliptic_curve::crypto_bigint::Encoding;
 
 /// Base field characteristic for secp256k1 as an 8x32 big integer, least to most significant.
@@ -188,40 +188,36 @@ impl FieldElement8x32R0 {
 
     /// Returns self * rhs mod p
     pub fn mul(&self, rhs: &Self) -> Self {
-        // Self(risc0::modmul_u256_denormalized(&self.0, &rhs.0, &MODULUS))
-        Self(U256::from_le_bytes(
-            modmul_256_u8_le(
-                U256::to_le_bytes(&self.0),
-                U256::to_le_bytes(&rhs.0),
-                U256::to_le_bytes(&MODULUS),
+        // powdr machine is 32 bits, so U256 = Uint<8>
+        Self(U256::from_words(
+            modmul_256_u32_le(
+                self.0.to_words(),
+                rhs.0.to_words(),
+                MODULUS.to_words(),
             ) // the remainder
         ))
     }
 
     /// Multiplies by a single-limb integer.
     pub fn mul_single(&self, rhs: u32) -> Self {
-        // Self(risc0::modmul_u256_denormalized(
-        //     &self.0,
-        //     &U256::from_words([rhs, 0, 0, 0, 0, 0, 0, 0]),
-        //     &MODULUS,
-        // ))
-        Self(U256::from_le_bytes(
-            modmul_256_u8_le(
-                U256::to_le_bytes(&self.0),
-                U256::to_le_bytes(&U256::from_words([rhs, 0, 0, 0, 0, 0, 0, 0])),
-                U256::to_le_bytes(&MODULUS),
+        // powdr machine is 32 bits, so U256 = Uint<8>
+        Self(U256::from_words(
+            modmul_256_u32_le(
+                self.0.to_words(),
+                [rhs, 0, 0, 0, 0, 0, 0, 0],
+                MODULUS.to_words(),
             ) // the remainder
         ))
     }
 
     /// Returns self * self
     pub fn square(&self) -> Self {
-        // Self(risc0::modmul_u256_denormalized(&self.0, &self.0, &MODULUS))
-        Self(U256::from_le_bytes(
-            modmul_256_u8_le(
-                U256::to_le_bytes(&self.0),
-                U256::to_le_bytes(&self.0),
-                U256::to_le_bytes(&MODULUS),
+        // powdr machine is 32 bits, so U256 = Uint<8>
+        Self(U256::from_words(
+            modmul_256_u32_le(
+                self.0.to_words(),
+                self.0.to_words(),
+                MODULUS.to_words(),
             ) // the remainder
         ))
     }

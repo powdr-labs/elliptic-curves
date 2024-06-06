@@ -25,7 +25,7 @@ use elliptic_curve::{
     Curve, ScalarPrimitive,
 };
 
-use powdr_riscv_runtime::arith::modmul_256_u8_le;
+use powdr_riscv_runtime::arith::{modmul_256_u8_le, modmul_256_u32_le};
 
 #[cfg(feature = "bits")]
 use {crate::ScalarBits, elliptic_curve::group::ff::PrimeFieldBits};
@@ -112,7 +112,7 @@ impl Scalar {
     /// Modulo multiplies two scalars.
     pub fn mul(&self, rhs: &Scalar) -> Scalar {
         let result = Self(U256::from_le_bytes(
-            modmul_256_u8_le(
+            modmul_256_u32_le(
                 U256::to_le_bytes(&self.0),
                 U256::to_le_bytes(&rhs.0),
                 U256::to_le_bytes(&ORDER),
