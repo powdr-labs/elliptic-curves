@@ -96,43 +96,43 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add(&self, other: &ProjectivePoint) -> ProjectivePoint {
-        // call when the values are normalized, into powdr ec operations
-        if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
-            // z being ONE means value is not identity
-            let self_x: [u8; 32] = self.x.to_bytes_le().into();
-            let self_y: [u8; 32] = self.y.to_bytes_le().into();
-            let other_x: [u8; 32] = other.x.to_bytes_le().into();
-            let other_y: [u8; 32] = other.y.to_bytes_le().into();
+        // // call when the values are normalized, into powdr ec operations
+        // if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
+        //     // z being ONE means value is not identity
+        //     let self_x: [u8; 32] = self.x.to_bytes_le().into();
+        //     let self_y: [u8; 32] = self.y.to_bytes_le().into();
+        //     let other_x: [u8; 32] = other.x.to_bytes_le().into();
+        //     let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-            print!("START k256 ADD: \n");
+        //     // print!("START k256 ADD: \n");
 
-            print!("self_x: {:?}\n", self_x);
-            print!("self_y: {:?}\n", self_y);
-            print!("other_x: {:?}\n", other_x);
-            print!("other_y: {:?}\n", other_y);
+        //     // print!("self_x: {:?}\n", self_x);
+        //     // print!("self_y: {:?}\n", self_y);
+        //     // print!("other_x: {:?}\n", other_x);
+        //     // print!("other_y: {:?}\n", other_y);
 
-            let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+        //     let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
 
-            print!("res_x: {:?}\n", res_x);
-            print!("res_y: {:?}\n", res_y);
+        //     // print!("res_x: {:?}\n", res_x);
+        //     // print!("res_y: {:?}\n", res_y);
 
-            let mut res = *self;
-            res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-            res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+        //     let mut res = *self;
+        //     res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+        //     res.y = FieldElement::from_bytes_unchecked_le(&res_y);
 
-            print!("res.x: {:?}\n", res.x);
-            print!("res.y: {:?}\n", res.y);
+        //     // print!("res.x: {:?}\n", res.x);
+        //     // print!("res.y: {:?}\n", res.y);
 
-            print!("END k256 ADD: \n");
+        //     // print!("END k256 ADD: \n");
 
-            return res;
-        }
+        //     return res;
+        // }
 
-        if self.is_identity().into() {
-            return *other;
-        } else if other.is_identity().into() {
-            return *self;
-        }
+        // if self.is_identity().into() {
+        //     return *other;
+        // } else if other.is_identity().into() {
+        //     return *self;
+        // }
 
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 7).
@@ -198,21 +198,21 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add_mixed(&self, other: &AffinePoint) -> ProjectivePoint {
-        if other.is_identity().into() {
-            return *self;
-        } else if self.z == FieldElement::ONE {
-            // z being ONE means value is not identity
-            let self_x: [u8; 32] = self.x.to_bytes_le().into();
-            let self_y: [u8; 32] = self.y.to_bytes_le().into();
-            let other_x: [u8; 32] = other.x.to_bytes_le().into();
-            let other_y: [u8; 32] = other.y.to_bytes_le().into();
+        // if other.is_identity().into() {
+        //     return *self;
+        // } else if self.z == FieldElement::ONE {
+        //     // z being ONE means value is not identity
+        //     let self_x: [u8; 32] = self.x.to_bytes_le().into();
+        //     let self_y: [u8; 32] = self.y.to_bytes_le().into();
+        //     let other_x: [u8; 32] = other.x.to_bytes_le().into();
+        //     let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-            let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
-            let mut res = *self;
-            res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-            res.y = FieldElement::from_bytes_unchecked_le(&res_y);
-            return res;
-        }
+        //     let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+        //     let mut res = *self;
+        //     res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+        //     res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+        //     return res;
+        // }
 
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 8).
@@ -273,20 +273,20 @@ impl ProjectivePoint {
     /// Doubles this point.
     #[inline]
     pub fn double(&self) -> ProjectivePoint {
-        if self.z == FieldElement::ONE {
-            // z being ONE means value is not identity
-            let self_x: [u8; 32] = self.x.to_bytes_le().into();
-            let self_y: [u8; 32] = self.y.to_bytes_le().into();
-            let (res_x, res_y) = double_u8_le(self_x, self_y);
-            let mut res = *self;
-            res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-            res.y = FieldElement::from_bytes_unchecked_le(&res_y);
-            return res;
-        }
+        // if self.z == FieldElement::ONE {
+        //     // z being ONE means value is not identity
+        //     let self_x: [u8; 32] = self.x.to_bytes_le().into();
+        //     let self_y: [u8; 32] = self.y.to_bytes_le().into();
+        //     let (res_x, res_y) = double_u8_le(self_x, self_y);
+        //     let mut res = *self;
+        //     res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+        //     res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+        //     return res;
+        // }
 
-        if self.is_identity().into() {
-            return *self;
-        }
+        // if self.is_identity().into() {
+        //     return *self;
+        // }
 
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 9).
