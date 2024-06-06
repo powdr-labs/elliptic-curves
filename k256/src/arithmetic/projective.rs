@@ -96,43 +96,26 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add(&self, other: &ProjectivePoint) -> ProjectivePoint {
-        // // call when the values are normalized, into powdr ec operations
-        // if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
-        //     // z being ONE means value is not identity
-        //     let self_x: [u8; 32] = self.x.to_bytes_le().into();
-        //     let self_y: [u8; 32] = self.y.to_bytes_le().into();
-        //     let other_x: [u8; 32] = other.x.to_bytes_le().into();
-        //     let other_y: [u8; 32] = other.y.to_bytes_le().into();
+        // call when the values are normalized, into powdr ec operations
+        if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
+            // z being ONE means value is not identity
+            let self_x: [u8; 32] = self.x.to_bytes_le().into();
+            let self_y: [u8; 32] = self.y.to_bytes_le().into();
+            let other_x: [u8; 32] = other.x.to_bytes_le().into();
+            let other_y: [u8; 32] = other.y.to_bytes_le().into();
+            
+            let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+            let mut res = *self;
+            res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+            res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+            return res;
+        }
 
-        //     // print!("START k256 ADD: \n");
-
-        //     // print!("self_x: {:?}\n", self_x);
-        //     // print!("self_y: {:?}\n", self_y);
-        //     // print!("other_x: {:?}\n", other_x);
-        //     // print!("other_y: {:?}\n", other_y);
-
-        //     let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
-
-        //     // print!("res_x: {:?}\n", res_x);
-        //     // print!("res_y: {:?}\n", res_y);
-
-        //     let mut res = *self;
-        //     res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-        //     res.y = FieldElement::from_bytes_unchecked_le(&res_y);
-
-        //     // print!("res.x: {:?}\n", res.x);
-        //     // print!("res.y: {:?}\n", res.y);
-
-        //     // print!("END k256 ADD: \n");
-
-        //     return res;
-        // }
-
-        // if self.is_identity().into() {
-        //     return *other;
-        // } else if other.is_identity().into() {
-        //     return *self;
-        // }
+        if self.is_identity().into() {
+            return *other;
+        } else if other.is_identity().into() {
+            return *self;
+        }
 
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 7).
@@ -148,25 +131,27 @@ impl ProjectivePoint {
         let yz_pairs = ((self.y + &self.z) * &(other.y + &other.z)) + &n_yy_zz;
         let xz_pairs = ((self.x + &self.z) * &(other.x + &other.z)) + &n_xx_zz;
 
-        // let bzz3 = zz.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+        // The following are from risc0, but in practice, powdr ec_add should have captured most cases
+        let bzz3 = zz.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        // let yy_m_bzz3 = yy + &bzz3.negate(1);
-        // let yy_p_bzz3 = yy + &bzz3;
+        let yy_m_bzz3 = yy + &bzz3.negate(1);
+        let yy_p_bzz3 = yy + &bzz3;
 
-        // let byz3 = &yz_pairs.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+        let byz3 = &yz_pairs.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        // let xx3 = xx.mul_single(3);
-        // let bxx9 = xx3.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+        let xx3 = xx.mul_single(3);
+        let bxx9 = xx3.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        // let new_x = (xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1); // m1
-        // let new_y = (yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs);
-        // let new_z = (yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs);
+        let new_x = (xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1); // m1
+        let new_y = (yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs);
+        let new_z = (yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs);
  
-        // return ProjectivePoint {
-        //     x: new_x,
-        //     y: new_y,
-        //     z: new_z,
-        // };
+        return ProjectivePoint {
+            x: new_x,
+            y: new_y,
+            z: new_z,
+        };
+        // end of risc0 block
 
         let bzz = zz.mul_single(CURVE_EQUATION_B_SINGLE);
         let bzz3 = (bzz.double() + &bzz).normalize_weak();
@@ -198,21 +183,21 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add_mixed(&self, other: &AffinePoint) -> ProjectivePoint {
-        // if other.is_identity().into() {
-        //     return *self;
-        // } else if self.z == FieldElement::ONE {
-        //     // z being ONE means value is not identity
-        //     let self_x: [u8; 32] = self.x.to_bytes_le().into();
-        //     let self_y: [u8; 32] = self.y.to_bytes_le().into();
-        //     let other_x: [u8; 32] = other.x.to_bytes_le().into();
-        //     let other_y: [u8; 32] = other.y.to_bytes_le().into();
+        if other.is_identity().into() {
+            return *self;
+        } else if self.z == FieldElement::ONE {
+            // z being ONE means value is not identity
+            let self_x: [u8; 32] = self.x.to_bytes_le().into();
+            let self_y: [u8; 32] = self.y.to_bytes_le().into();
+            let other_x: [u8; 32] = other.x.to_bytes_le().into();
+            let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-        //     let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
-        //     let mut res = *self;
-        //     res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-        //     res.y = FieldElement::from_bytes_unchecked_le(&res_y);
-        //     return res;
-        // }
+            let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+            let mut res = *self;
+            res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+            res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+            return res;
+        }
 
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 8).
@@ -223,26 +208,28 @@ impl ProjectivePoint {
         let yz_pairs = (other.y * &self.z) + &self.y;
         let xz_pairs = (other.x * &self.z) + &self.x;
 
-        // // Same as below, but using mul_single instead of repeated addition to get small
-        // // multiplications and normalize_weak is removed.
-        // let bzz3 = self.z.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+        // The following are from risc0, but in practice, powdr ec_add should have captured most cases
+        // Same as below, but using mul_single instead of repeated addition to get small
+        // multiplications and normalize_weak is removed.
+        let bzz3 = self.z.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        // let yy_m_bzz3 = yy + &bzz3.negate(1);
-        // let yy_p_bzz3 = yy + &bzz3;
+        let yy_m_bzz3 = yy + &bzz3.negate(1);
+        let yy_p_bzz3 = yy + &bzz3;
 
-        // let n_byz3 =
-        //     &yz_pairs.mul(&FieldElement::from_i64(CURVE_EQUATION_B_SINGLE as i64 * -3));
+        let n_byz3 =
+            &yz_pairs.mul(&FieldElement::from_i64(CURVE_EQUATION_B_SINGLE as i64 * -3));
 
-        // let xx3 = xx.mul_single(3);
-        // let bxx9 = xx3.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+        let xx3 = xx.mul_single(3);
+        let bxx9 = xx3.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        // let mut ret = ProjectivePoint {
-        //     x: (xy_pairs * &yy_m_bzz3) + &(n_byz3 * &xz_pairs),
-        //     y: (yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs),
-        //     z: (yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs),
-        // };
-        // ret.conditional_assign(self, other.is_identity());
-        // return ret;
+        let mut ret = ProjectivePoint {
+            x: (xy_pairs * &yy_m_bzz3) + &(n_byz3 * &xz_pairs),
+            y: (yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs),
+            z: (yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs),
+        };
+        ret.conditional_assign(self, other.is_identity());
+        return ret;
+        // end of risc0 block
 
         let bzz = &self.z.mul_single(CURVE_EQUATION_B_SINGLE);
         let bzz3 = (bzz.double() + bzz).normalize_weak();
@@ -273,20 +260,20 @@ impl ProjectivePoint {
     /// Doubles this point.
     #[inline]
     pub fn double(&self) -> ProjectivePoint {
-        // if self.z == FieldElement::ONE {
-        //     // z being ONE means value is not identity
-        //     let self_x: [u8; 32] = self.x.to_bytes_le().into();
-        //     let self_y: [u8; 32] = self.y.to_bytes_le().into();
-        //     let (res_x, res_y) = double_u8_le(self_x, self_y);
-        //     let mut res = *self;
-        //     res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-        //     res.y = FieldElement::from_bytes_unchecked_le(&res_y);
-        //     return res;
-        // }
+        if self.z == FieldElement::ONE {
+            // z being ONE means value is not identity
+            let self_x: [u8; 32] = self.x.to_bytes_le().into();
+            let self_y: [u8; 32] = self.y.to_bytes_le().into();
+            let (res_x, res_y) = double_u8_le(self_x, self_y);
+            let mut res = *self;
+            res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+            res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+            return res;
+        }
 
-        // if self.is_identity().into() {
-        //     return *self;
-        // }
+        if self.is_identity().into() {
+            return *self;
+        }
 
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 9).
@@ -295,22 +282,24 @@ impl ProjectivePoint {
         let zz = self.z.square();
         let xy2 = (self.x * &self.y).double();
 
-        // // Same as below, but using mul_single instead of repeated addition to get small
-        // // multiplications and normalize_weak is removed.
-        // let bzz3 = zz.mul_single(CURVE_EQUATION_B_SINGLE * 3);
-        // let n_bzz9 = zz.mul(&FieldElement::from_i64(CURVE_EQUATION_B_SINGLE as i64 * -9));
+        // The following are from risc0, but in practice, powdr ec_add should have captured most cases
+        // Same as below, but using mul_single instead of repeated addition to get small
+        // multiplications and normalize_weak is removed.
+        let bzz3 = zz.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+        let n_bzz9 = zz.mul(&FieldElement::from_i64(CURVE_EQUATION_B_SINGLE as i64 * -9));
 
-        // let yy_m_bzz9 = yy + &n_bzz9;
-        // let yy_p_bzz3 = yy + &bzz3;
+        let yy_m_bzz9 = yy + &n_bzz9;
+        let yy_p_bzz3 = yy + &bzz3;
 
-        // let yy_zz = yy * &zz;
-        // let t = yy_zz.mul_single(CURVE_EQUATION_B_SINGLE * 24);
+        let yy_zz = yy * &zz;
+        let t = yy_zz.mul_single(CURVE_EQUATION_B_SINGLE * 24);
 
-        // return ProjectivePoint {
-        //     x: xy2 * &yy_m_bzz9,
-        //     y: ((yy_m_bzz9 * &yy_p_bzz3) + &t),
-        //     z: ((yy * &self.y) * &self.z).mul_single(8),
-        // };
+        return ProjectivePoint {
+            x: xy2 * &yy_m_bzz9,
+            y: ((yy_m_bzz9 * &yy_p_bzz3) + &t),
+            z: ((yy * &self.y) * &self.z).mul_single(8),
+        };
+        // end of risc0 block
 
         let bzz = &zz.mul_single(CURVE_EQUATION_B_SINGLE);
         let bzz3 = (bzz.double() + bzz).normalize_weak();

@@ -56,20 +56,6 @@ use elliptic_curve::{
 #[cfg(feature = "precomputed-tables")]
 use once_cell::sync::Lazy;
 
-// /// Lookup table containing precomputed values `[p, 2p, 3p, ..., 8p]`
-// #[derive(Copy, Clone, Default)]
-// struct LookupTable([ProjectivePoint; 8]);
-
-// impl From<&ProjectivePoint> for LookupTable {
-//     fn from(p: &ProjectivePoint) -> Self {
-//         let mut points = [*p; 8];
-//         for j in 0..7 {
-//             points[j + 1] = p + &points[j];
-//         }
-//         LookupTable(points)
-//     }
-// }
-
 #[repr(align(1024))]
 #[derive(Copy, Clone, Default)]
 struct LookupTable([ProjectivePoint; 9]);

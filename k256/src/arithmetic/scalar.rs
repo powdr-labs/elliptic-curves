@@ -111,7 +111,6 @@ impl Scalar {
 
     /// Modulo multiplies two scalars.
     pub fn mul(&self, rhs: &Scalar) -> Scalar {
-        // WideScalar::mul_wide(self, rhs).reduce()
         let result = Self(U256::from_le_bytes(
             modmul_256_u8_le(
                 U256::to_le_bytes(&self.0),
@@ -119,7 +118,9 @@ impl Scalar {
                 U256::to_le_bytes(&ORDER),
             ) // the remainder
         ));
-        assert!(bool::from(result.0.ct_lt(&ORDER))); // the honest prover should provide a remainder that's reduced already
+        // our asm doesn't guarantee full modulus reduction, so it's asserted at the rust level for soundness
+        // the honest prover should provide a remainder that's reduced already, so this assertion should never fail
+        assert!(bool::from(result.0.ct_lt(&ORDER))); 
         result
     }
 

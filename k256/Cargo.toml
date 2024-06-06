@@ -28,7 +28,7 @@ hex-literal = { version = "0.4", optional = true }
 serdect = { version = "0.2", optional = true, default-features = false }
 sha2 = { version = "0.10", optional = true, default-features = false }
 signature = { version = "2", optional = true }
-powdr-riscv-runtime = { path = "/Users/steve/Documents/repo/powdr-5_6_24/powdr/riscv-runtime" }
+powdr-riscv-runtime = { git = "https://github.com/powdr-labs/powdr.git", subdirectory = "riscv-runtime" }
 
 [dev-dependencies]
 blobby = "0.3"
