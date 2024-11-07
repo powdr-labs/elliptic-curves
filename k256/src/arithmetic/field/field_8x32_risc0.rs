@@ -1,15 +1,16 @@
 //! Field element modulo the curve internal modulus using 32-bit limbs.
 #![allow(unsafe_code)]
 
+// This file is the same as the original below except for minor snippets.
+// https://github.com/risc0/RustCrypto-elliptic-curves/blob/risczero/k256/src/arithmetic/field/field_8x32_risc0.rs
+
 use crate::FieldBytes;
 use elliptic_curve::{
     bigint::{ArrayEncoding, Integer, Limb, Zero, U256},
     subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::Zeroize,
-    bigint::Encoding,
 };
-use powdr_riscv_runtime::arith::{modmul_256_u32_le, modmul_256_u8_le};
-// use elliptic_curve::crypto_bigint::Encoding;
+use powdr_riscv_runtime::arith::modmul_256_u32_le;
 
 /// Base field characteristic for secp256k1 as an 8x32 big integer, least to most significant.
 const MODULUS: U256 =
@@ -23,8 +24,9 @@ const MODULUS_CORRECTION: U256 = U256::ZERO.wrapping_sub(&MODULUS);
 /// Unlike the 10x26 and 8x52 implementations, the values in this implementation are always
 /// fully reduced and normalized as there is no extra room in the representation.
 ///
-/// NOTE: This implementation will only run inside the RISC Zero guest. As a result, the
-/// requirements for constant-timeness are different than on a physical platform.
+/// NOTE: This implementation will only run inside the RISC Zero / powdrVM guests.
+/// As a result, the requirements for constant-timeness are different
+/// than on a physical platform.
 #[derive(Clone, Copy, Debug)]
 pub struct FieldElement8x32R0(pub(crate) U256);
 
@@ -38,13 +40,13 @@ impl FieldElement8x32R0 {
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     /// Does not check the result for being in the correct range.
     pub(crate) const fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
-        Self(U256::from_be_slice(&bytes.as_slice()))
+        Self(U256::from_be_slice(bytes.as_slice()))
     }
 
     /// Attempts to parse the given byte array as an SEC1-encoded field element (but little endian!).
     /// Does not check the result for being in the correct range.
     pub(crate) fn from_bytes_unchecked_le(bytes: &[u8; 32]) -> Self {
-        Self(U256::from_le_slice(&bytes.as_slice()))
+        Self(U256::from_le_slice(bytes.as_slice()))
     }
 
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
@@ -101,7 +103,7 @@ impl FieldElement8x32R0 {
     pub fn normalize(&self) -> Self {
         // When the prover is cooperative, the value is always normalized.
         assert!(!bool::from(self.get_overflow()));
-        self.clone()
+        *self
     }
 
     /// Checks if the field element becomes zero if normalized.
@@ -190,11 +192,7 @@ impl FieldElement8x32R0 {
     pub fn mul(&self, rhs: &Self) -> Self {
         // powdr machine is 32 bits, so U256 = Uint<8>
         Self(U256::from_words(
-            modmul_256_u32_le(
-                self.0.to_words(),
-                rhs.0.to_words(),
-                MODULUS.to_words(),
-            ) // the remainder
+            modmul_256_u32_le(self.0.to_words(), rhs.0.to_words(), MODULUS.to_words()), // the remainder
         ))
     }
 
@@ -206,7 +204,7 @@ impl FieldElement8x32R0 {
                 self.0.to_words(),
                 [rhs, 0, 0, 0, 0, 0, 0, 0],
                 MODULUS.to_words(),
-            ) // the remainder
+            ), // the remainder
         ))
     }
 
@@ -214,11 +212,7 @@ impl FieldElement8x32R0 {
     pub fn square(&self) -> Self {
         // powdr machine is 32 bits, so U256 = Uint<8>
         Self(U256::from_words(
-            modmul_256_u32_le(
-                self.0.to_words(),
-                self.0.to_words(),
-                MODULUS.to_words(),
-            ) // the remainder
+            modmul_256_u32_le(self.0.to_words(), self.0.to_words(), MODULUS.to_words()), // the remainder
         ))
     }
 }

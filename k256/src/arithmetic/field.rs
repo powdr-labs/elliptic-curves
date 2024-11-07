@@ -2,12 +2,13 @@
 
 #![allow(clippy::assign_op_pattern, clippy::op_ref)]
 
-/*
 use cfg_if::cfg_if;
 
 cfg_if! {
 
-    if #[cfg(target_pointer_width = "32")] {
+    if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
+        mod field_8x32_risc0;
+    } else if #[cfg(target_pointer_width = "32")] {
         mod field_10x26;
     } else if #[cfg(target_pointer_width = "64")] {
         mod field_5x52;
@@ -22,7 +23,9 @@ cfg_if! {
         use field_impl::FieldElementImpl;
     } else {
         cfg_if! {
-            if #[cfg(target_pointer_width = "32")] {
+            if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
+                mod field_8x32_risc0;
+            } else if #[cfg(target_pointer_width = "32")] {
                 use field_10x26::FieldElement10x26 as FieldElementImpl;
             } else if #[cfg(target_pointer_width = "64")] {
                 use field_5x52::FieldElement5x52 as FieldElementImpl;
@@ -32,10 +35,6 @@ cfg_if! {
         }
     }
 }
-*/
-
-mod field_8x32_risc0;
-use field_8x32_risc0::FieldElement8x32R0 as FieldElementImpl;
 
 use crate::FieldBytes;
 use core::{
@@ -125,6 +124,7 @@ impl FieldElement {
 
     /// Convert a `i64` to a field element.
     /// Returned value may be only weakly normalized.
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
     pub const fn from_i64(w: i64) -> Self {
         Self(FieldElementImpl::from_i64(w))
     }
@@ -165,8 +165,16 @@ impl FieldElement {
 
     /// Returns 2*self.
     /// Doubles the magnitude.
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
     pub fn double(&self) -> Self {
         self.mul_single(2)
+    }
+
+    /// Returns 2*self.
+    /// Doubles the magnitude.
+    #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
+    pub fn double(&self) -> Self {
+        Self(self.0.add(&(self.0)))
     }
 
     /// Returns self * rhs mod p
@@ -386,6 +394,7 @@ impl From<u64> for FieldElement {
     }
 }
 
+#[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
 impl From<i64> for FieldElement {
     fn from(k: i64) -> Self {
         Self(FieldElementImpl::from_i64(k))

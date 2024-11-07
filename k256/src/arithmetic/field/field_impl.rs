@@ -8,7 +8,19 @@ use elliptic_curve::{
     zeroize::Zeroize,
 };
 
-use super::field_8x32_risc0::FieldElement8x32R0 as FieldElementUnsafeImpl;
+use cfg_if::cfg_if;
+
+cfg_if! {
+    if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
+        use super::field_8x32_risc0::FieldElement8x32R0 as FieldElementUnsafeImpl;
+    } else if #[cfg(target_pointer_width = "32")] {
+        use super::field_10x26::FieldElement10x26 as FieldElementUnsafeImpl;
+    } else if #[cfg(target_pointer_width = "64")] {
+        use super::field_5x52::FieldElement5x52 as FieldElementUnsafeImpl;
+    } else {
+        compile_error!("unsupported target word size (i.e. target_pointer_width)");
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct FieldElementImpl {
@@ -52,7 +64,10 @@ impl FieldElementImpl {
         debug_assert!(magnitude <= FieldElementUnsafeImpl::max_magnitude());
         Self {
             value: *value,
+            #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
             magnitude: 1,
+            #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
+            magnitude,
             normalized: false,
         }
     }
@@ -74,6 +89,7 @@ impl FieldElementImpl {
 
     /// Convert a `i64` to a field element.
     /// Returned value may be only weakly normalized.
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
     pub(crate) const fn from_i64(w: i64) -> Self {
         Self::new_weak_normalized(&FieldElementUnsafeImpl::from_i64(w))
     }
