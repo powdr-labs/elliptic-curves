@@ -422,7 +422,7 @@ mod tests {
                 1000
             }
         ), |(b0 in ANY, b1 in ANY, b2 in ANY, b3 in ANY, b4 in ANY, b5 in ANY)| {
-            let mut data = GenericArray::default();
+            let mut data = Array::default();
             data[..8].copy_from_slice(&b0.to_be_bytes());
             data[8..16].copy_from_slice(&b1.to_be_bytes());
             data[16..24].copy_from_slice(&b2.to_be_bytes());
