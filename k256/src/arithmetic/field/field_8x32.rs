@@ -28,9 +28,9 @@ const MODULUS_CORRECTION: U256 = U256::ZERO.wrapping_sub(&MODULUS);
 /// As a result, the requirements for constant-timeness are different
 /// than on a physical platform.
 #[derive(Clone, Copy, Debug)]
-pub struct FieldElement8x32R0(pub(crate) U256);
+pub struct FieldElement8x32(pub(crate) U256);
 
-impl FieldElement8x32R0 {
+impl FieldElement8x32 {
     /// Zero element.
     pub const ZERO: Self = Self(U256::ZERO);
 
@@ -111,7 +111,7 @@ impl FieldElement8x32R0 {
         self.0.ct_eq(&U256::ZERO) | self.0.ct_eq(&MODULUS)
     }
 
-    /// Determine if this `FieldElement8x32R0` is zero.
+    /// Determine if this `FieldElement8x32` is zero.
     ///
     /// # Returns
     ///
@@ -120,7 +120,7 @@ impl FieldElement8x32R0 {
         self.0.is_zero()
     }
 
-    /// Determine if this `FieldElement8x32R0` is odd in the SEC1 sense: `self mod 2 == 1`.
+    /// Determine if this `FieldElement8x32` is odd in the SEC1 sense: `self mod 2 == 1`.
     ///
     /// Value must be normalized before calling is_odd.
     ///
@@ -217,25 +217,25 @@ impl FieldElement8x32R0 {
     }
 }
 
-impl Default for FieldElement8x32R0 {
+impl Default for FieldElement8x32 {
     fn default() -> Self {
         Self::ZERO
     }
 }
 
-impl ConditionallySelectable for FieldElement8x32R0 {
+impl ConditionallySelectable for FieldElement8x32 {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Self(U256::conditional_select(&a.0, &b.0, choice))
     }
 }
 
-impl ConstantTimeEq for FieldElement8x32R0 {
+impl ConstantTimeEq for FieldElement8x32 {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.0.ct_eq(&other.0)
     }
 }
 
-impl Zeroize for FieldElement8x32R0 {
+impl Zeroize for FieldElement8x32 {
     fn zeroize(&mut self) {
         self.0.zeroize();
     }
@@ -243,7 +243,7 @@ impl Zeroize for FieldElement8x32R0 {
 
 #[cfg(test)]
 mod tests {
-    use super::FieldElement8x32R0 as F;
+    use super::FieldElement8x32 as F;
     use hex_literal::hex;
 
     const VAL_A: F = F::from_bytes_unchecked(&hex!(

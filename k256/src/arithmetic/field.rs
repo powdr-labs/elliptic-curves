@@ -7,7 +7,7 @@ use cfg_if::cfg_if;
 cfg_if! {
 
     if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-        mod field_8x32_risc0;
+        mod field_8x32;
     } else if #[cfg(target_pointer_width = "32")] {
         mod field_10x26;
     } else if #[cfg(target_pointer_width = "64")] {
@@ -24,7 +24,7 @@ cfg_if! {
     } else {
         cfg_if! {
             if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-                use field_8x32_risc0::FieldElement8x32R0 as FieldElementImpl;
+                use field_8x32::FieldElement8x32 as FieldElementImpl;
             } else if #[cfg(target_pointer_width = "32")] {
                 use field_10x26::FieldElement10x26 as FieldElementImpl;
             } else if #[cfg(target_pointer_width = "64")] {

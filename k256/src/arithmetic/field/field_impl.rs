@@ -12,7 +12,7 @@ use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))] {
-        use super::field_8x32_risc0::FieldElement8x32R0 as FieldElementUnsafeImpl;
+        use super::field_8x32::FieldElement8x32 as FieldElementUnsafeImpl;
     } else if #[cfg(target_pointer_width = "32")] {
         use super::field_10x26::FieldElement10x26 as FieldElementUnsafeImpl;
     } else if #[cfg(target_pointer_width = "64")] {

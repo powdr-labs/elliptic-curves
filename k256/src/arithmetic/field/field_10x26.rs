@@ -159,17 +159,6 @@ impl FieldElement10x26 {
         CtOption::new(res, !overflow)
     }
 
-    // /// Attempts to parse the given byte array as an SEC1-encoded field element (but little-endian!).
-    // ///
-    // /// Returns None if the byte array does not contain a big-endian integer in the range
-    // /// [0, p).
-    // pub fn from_bytes_le(bytes: &FieldBytes) -> CtOption<Self> {
-    //     let res = Self::from_bytes_unchecked_le(bytes.as_ref());
-    //     let overflow = res.get_overflow();
-
-    //     CtOption::new(res, !overflow)
-    // }
-
     pub const fn from_u64(val: u64) -> Self {
         let w0 = (val as u32) & 0x3FFFFFF;
         let val = val >> 26;
