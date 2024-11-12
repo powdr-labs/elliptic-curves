@@ -25,6 +25,9 @@ use elliptic_curve::{
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
+#[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+use powdr_riscv_runtime::ec::{add_u8_le, double_u8_le};
+
 #[rustfmt::skip]
 const ENDOMORPHISM_BETA: FieldElement = FieldElement::from_bytes_unchecked(&[
     0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10,
@@ -94,6 +97,30 @@ impl ProjectivePoint {
 
     /// Returns `self + other`.
     fn add(&self, other: &ProjectivePoint) -> ProjectivePoint {
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            // call when the values are normalized, into powdr ec operations
+            if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
+                // z being ONE means value is not identity
+                let self_x: [u8; 32] = self.x.to_bytes_le().into();
+                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let other_x: [u8; 32] = other.x.to_bytes_le().into();
+                let other_y: [u8; 32] = other.y.to_bytes_le().into();
+
+                let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+                let mut res = *self;
+                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                return res;
+            }
+
+            if self.is_identity().into() {
+                return *other;
+            } else if other.is_identity().into() {
+                return *self;
+            }
+        }
+
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 7).
 
@@ -108,36 +135,83 @@ impl ProjectivePoint {
         let yz_pairs = ((self.y + &self.z) * &(other.y + &other.z)) + &n_yy_zz;
         let xz_pairs = ((self.x + &self.z) * &(other.x + &other.z)) + &n_xx_zz;
 
-        let bzz = zz.mul_single(CURVE_EQUATION_B_SINGLE);
-        let bzz3 = (bzz.double() + &bzz).normalize_weak();
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            // The following are from risc0, but in practice, powdr ec_add should have captured most cases
+            let bzz3 = zz.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        let yy_m_bzz3 = yy + &bzz3.negate(1);
-        let yy_p_bzz3 = yy + &bzz3;
+            let yy_m_bzz3 = yy + &bzz3.negate(1);
+            let yy_p_bzz3 = yy + &bzz3;
 
-        let byz = &yz_pairs
-            .mul_single(CURVE_EQUATION_B_SINGLE)
-            .normalize_weak();
-        let byz3 = (byz.double() + byz).normalize_weak();
+            let byz3 = &yz_pairs.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        let xx3 = xx.double() + &xx;
-        let bxx9 = (xx3.double() + &xx3)
-            .normalize_weak()
-            .mul_single(CURVE_EQUATION_B_SINGLE)
-            .normalize_weak();
+            let xx3 = xx.mul_single(3);
+            let bxx9 = xx3.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        let new_x = ((xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1)).normalize_weak(); // m1
-        let new_y = ((yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs)).normalize_weak();
-        let new_z = ((yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs)).normalize_weak();
+            let new_x = (xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1); // m1
+            let new_y = (yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs);
+            let new_z = (yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs);
 
-        ProjectivePoint {
-            x: new_x,
-            y: new_y,
-            z: new_z,
+            ProjectivePoint {
+                x: new_x,
+                y: new_y,
+                z: new_z,
+            }
+            // end of risc0 block
+        }
+
+        #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
+        {
+            let bzz = zz.mul_single(CURVE_EQUATION_B_SINGLE);
+            let bzz3 = (bzz.double() + &bzz).normalize_weak();
+
+            let yy_m_bzz3 = yy + &bzz3.negate(1);
+            let yy_p_bzz3 = yy + &bzz3;
+
+            let byz = &yz_pairs
+                .mul_single(CURVE_EQUATION_B_SINGLE)
+                .normalize_weak();
+            let byz3 = (byz.double() + byz).normalize_weak();
+
+            let xx3 = xx.double() + &xx;
+            let bxx9 = (xx3.double() + &xx3)
+                .normalize_weak()
+                .mul_single(CURVE_EQUATION_B_SINGLE)
+                .normalize_weak();
+
+            let new_x = ((xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1)).normalize_weak(); // m1
+            let new_y = ((yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs)).normalize_weak();
+            let new_z = ((yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs)).normalize_weak();
+
+            ProjectivePoint {
+                x: new_x,
+                y: new_y,
+                z: new_z,
+            }
         }
     }
 
     /// Returns `self + other`.
     fn add_mixed(&self, other: &AffinePoint) -> ProjectivePoint {
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            if other.is_identity().into() {
+                return *self;
+            } else if self.z == FieldElement::ONE {
+                // z being ONE means value is not identity
+                let self_x: [u8; 32] = self.x.to_bytes_le().into();
+                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let other_x: [u8; 32] = other.x.to_bytes_le().into();
+                let other_y: [u8; 32] = other.y.to_bytes_le().into();
+
+                let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+                let mut res = *self;
+                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                return res;
+            }
+        }
+
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 8).
 
@@ -147,35 +221,82 @@ impl ProjectivePoint {
         let yz_pairs = (other.y * &self.z) + &self.y;
         let xz_pairs = (other.x * &self.z) + &self.x;
 
-        let bzz = &self.z.mul_single(CURVE_EQUATION_B_SINGLE);
-        let bzz3 = (bzz.double() + bzz).normalize_weak();
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            // The following are from risc0, but in practice, powdr ec_add should have captured most cases
+            // Same as below, but using mul_single instead of repeated addition to get small
+            // multiplications and normalize_weak is removed.
+            let bzz3 = self.z.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        let yy_m_bzz3 = yy + &bzz3.negate(1);
-        let yy_p_bzz3 = yy + &bzz3;
+            let yy_m_bzz3 = yy + &bzz3.negate(1);
+            let yy_p_bzz3 = yy + &bzz3;
 
-        let byz = &yz_pairs
-            .mul_single(CURVE_EQUATION_B_SINGLE)
-            .normalize_weak();
-        let byz3 = (byz.double() + byz).normalize_weak();
+            let n_byz3 =
+                &yz_pairs.mul(&FieldElement::from_i64(CURVE_EQUATION_B_SINGLE as i64 * -3));
 
-        let xx3 = xx.double() + &xx;
-        let bxx9 = &(xx3.double() + &xx3)
-            .normalize_weak()
-            .mul_single(CURVE_EQUATION_B_SINGLE)
-            .normalize_weak();
+            let xx3 = xx.mul_single(3);
+            let bxx9 = xx3.mul_single(CURVE_EQUATION_B_SINGLE * 3);
 
-        let mut ret = ProjectivePoint {
-            x: ((xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1)).normalize_weak(),
-            y: ((yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs)).normalize_weak(),
-            z: ((yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs)).normalize_weak(),
-        };
-        ret.conditional_assign(self, other.is_identity());
-        ret
+            let mut ret = ProjectivePoint {
+                x: (xy_pairs * &yy_m_bzz3) + &(n_byz3 * &xz_pairs),
+                y: (yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs),
+                z: (yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs),
+            };
+            ret.conditional_assign(self, other.is_identity());
+            ret
+            // end of risc0 block
+        }
+
+        #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
+        {
+            let bzz = &self.z.mul_single(CURVE_EQUATION_B_SINGLE);
+            let bzz3 = (bzz.double() + bzz).normalize_weak();
+
+            let yy_m_bzz3 = yy + &bzz3.negate(1);
+            let yy_p_bzz3 = yy + &bzz3;
+
+            let byz = &yz_pairs
+                .mul_single(CURVE_EQUATION_B_SINGLE)
+                .normalize_weak();
+            let byz3 = (byz.double() + byz).normalize_weak();
+
+            let xx3 = xx.double() + &xx;
+            let bxx9 = &(xx3.double() + &xx3)
+                .normalize_weak()
+                .mul_single(CURVE_EQUATION_B_SINGLE)
+                .normalize_weak();
+
+            let mut ret = ProjectivePoint {
+                x: ((xy_pairs * &yy_m_bzz3) + &(byz3 * &xz_pairs).negate(1)).normalize_weak(),
+                y: ((yy_p_bzz3 * &yy_m_bzz3) + &(bxx9 * &xz_pairs)).normalize_weak(),
+                z: ((yz_pairs * &yy_p_bzz3) + &(xx3 * &xy_pairs)).normalize_weak(),
+            };
+            ret.conditional_assign(self, other.is_identity());
+            ret
+        }
     }
 
     /// Doubles this point.
     #[inline]
     pub fn double(&self) -> ProjectivePoint {
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            if self.z == FieldElement::ONE {
+                // z being ONE means value is not identity
+                let self_x: [u8; 32] = self.x.to_bytes_le().into();
+                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let (res_x, res_y) = double_u8_le(self_x, self_y);
+                let mut res = *self;
+                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
+                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                return res;
+            }
+
+            if self.is_identity().into() {
+                return *self;
+            }
+        }
+
         // We implement the complete addition formula from Renes-Costello-Batina 2015
         // (https://eprint.iacr.org/2015/1060 Algorithm 9).
 
@@ -183,27 +304,52 @@ impl ProjectivePoint {
         let zz = self.z.square();
         let xy2 = (self.x * &self.y).double();
 
-        let bzz = &zz.mul_single(CURVE_EQUATION_B_SINGLE);
-        let bzz3 = (bzz.double() + bzz).normalize_weak();
-        let bzz9 = (bzz3.double() + &bzz3).normalize_weak();
+        #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+        {
+            // The following are from risc0, but in practice, powdr ec_add should have captured most cases
+            // Same as below, but using mul_single instead of repeated addition to get small
+            // multiplications and normalize_weak is removed.
+            let bzz3 = zz.mul_single(CURVE_EQUATION_B_SINGLE * 3);
+            let n_bzz9 = zz.mul(&FieldElement::from_i64(CURVE_EQUATION_B_SINGLE as i64 * -9));
 
-        let yy_m_bzz9 = yy + &bzz9.negate(1);
-        let yy_p_bzz3 = yy + &bzz3;
+            let yy_m_bzz9 = yy + &n_bzz9;
+            let yy_p_bzz3 = yy + &bzz3;
 
-        let yy_zz = yy * &zz;
-        let yy_zz8 = yy_zz.double().double().double();
-        let t = (yy_zz8.double() + &yy_zz8)
-            .normalize_weak()
-            .mul_single(CURVE_EQUATION_B_SINGLE);
+            let yy_zz = yy * &zz;
+            let t = yy_zz.mul_single(CURVE_EQUATION_B_SINGLE * 24);
 
-        ProjectivePoint {
-            x: xy2 * &yy_m_bzz9,
-            y: ((yy_m_bzz9 * &yy_p_bzz3) + &t).normalize_weak(),
-            z: ((yy * &self.y) * &self.z)
-                .double()
-                .double()
-                .double()
-                .normalize_weak(),
+            ProjectivePoint {
+                x: xy2 * &yy_m_bzz9,
+                y: ((yy_m_bzz9 * &yy_p_bzz3) + &t),
+                z: ((yy * &self.y) * &self.z).mul_single(8),
+            }
+            // end of risc0 block
+        }
+
+        #[cfg(not(all(target_os = "zkvm", target_arch = "riscv32")))]
+        {
+            let bzz = &zz.mul_single(CURVE_EQUATION_B_SINGLE);
+            let bzz3 = (bzz.double() + bzz).normalize_weak();
+            let bzz9 = (bzz3.double() + &bzz3).normalize_weak();
+
+            let yy_m_bzz9 = yy + &bzz9.negate(1);
+            let yy_p_bzz3 = yy + &bzz3;
+
+            let yy_zz = yy * &zz;
+            let yy_zz8 = yy_zz.double().double().double();
+            let t = (yy_zz8.double() + &yy_zz8)
+                .normalize_weak()
+                .mul_single(CURVE_EQUATION_B_SINGLE);
+
+            ProjectivePoint {
+                x: xy2 * &yy_m_bzz9,
+                y: ((yy_m_bzz9 * &yy_p_bzz3) + &t).normalize_weak(),
+                z: ((yy * &self.y) * &self.z)
+                    .double()
+                    .double()
+                    .double()
+                    .normalize_weak(),
+            }
         }
     }
 
