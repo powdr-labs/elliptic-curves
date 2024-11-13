@@ -99,6 +99,10 @@ impl ProjectivePoint {
     fn add(&self, other: &ProjectivePoint) -> ProjectivePoint {
         #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
         {
+            if *self == *other {
+                return self.double();
+            }
+
             // call when the values are normalized, into powdr ec operations
             if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
                 // z being ONE means value is not identity
@@ -195,6 +199,9 @@ impl ProjectivePoint {
     fn add_mixed(&self, other: &AffinePoint) -> ProjectivePoint {
         #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
         {
+            if *self == other.to_curve() {
+                return self.double();
+            }
             if other.is_identity().into() {
                 return *self;
             } else if self.z == FieldElement::ONE {
