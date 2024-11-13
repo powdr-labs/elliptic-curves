@@ -107,7 +107,12 @@ impl ProjectivePoint {
                 let other_x: [u8; 32] = other.x.to_bytes_le().into();
                 let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-                let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+                let (res_x, res_y) = if self_x == other_x && self_y == other_y {
+                    double_u8_le(self_x, self_y)
+                } else {
+                    add_u8_le(self_x, self_y, other_x, other_y)
+                };
+
                 let mut res = *self;
                 res.x = FieldElement::from_bytes_unchecked_le(&res_x);
                 res.y = FieldElement::from_bytes_unchecked_le(&res_y);
@@ -204,7 +209,12 @@ impl ProjectivePoint {
                 let other_x: [u8; 32] = other.x.to_bytes_le().into();
                 let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-                let (res_x, res_y) = add_u8_le(self_x, self_y, other_x, other_y);
+                let (res_x, res_y) = if self_x == other_x && self_y == other_y {
+                    double_u8_le(self_x, self_y)
+                } else {
+                    add_u8_le(self_x, self_y, other_x, other_y)
+                };
+
                 let mut res = *self;
                 res.x = FieldElement::from_bytes_unchecked_le(&res_x);
                 res.y = FieldElement::from_bytes_unchecked_le(&res_y);
