@@ -107,15 +107,30 @@ impl ProjectivePoint {
                 let other_x: [u8; 32] = other.x.to_bytes_le().into();
                 let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-                let (res_x, res_y) = if self_x == other_x && self_y == other_y {
-                    double_u8_le(self_x, self_y)
+                let mut combined: [u8; 64] = [0; 64];
+                let result = if self_x == other_x && self_y == other_y {
+                    combined[..32].copy_from_slice(&self_x);
+                    combined[32..].copy_from_slice(&self_y);
+                    double_u8_le(combined)
                 } else {
-                    add_u8_le(self_x, self_y, other_x, other_y)
+                    combined[..32].copy_from_slice(&self_x);
+                    combined[32..].copy_from_slice(&self_y);
+
+                    let mut combined_other: [u8; 64] = [0; 64];
+                    combined_other[..32].copy_from_slice(&other_x);
+                    combined_other[32..].copy_from_slice(&other_y);
+
+                    add_u8_le(combined, combined_other)
                 };
+                let (res_x, res_y) = result.split_at(32);
 
                 let mut res = *self;
-                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                res.x = FieldElement::from_bytes_unchecked_le(
+                    &res_x.try_into().expect("Expected 32 bytes"),
+                );
+                res.y = FieldElement::from_bytes_unchecked_le(
+                    &res_y.try_into().expect("Expected 32 bytes"),
+                );
                 return res;
             }
 
@@ -209,15 +224,30 @@ impl ProjectivePoint {
                 let other_x: [u8; 32] = other.x.to_bytes_le().into();
                 let other_y: [u8; 32] = other.y.to_bytes_le().into();
 
-                let (res_x, res_y) = if self_x == other_x && self_y == other_y {
-                    double_u8_le(self_x, self_y)
+                let mut combined: [u8; 64] = [0; 64];
+                let result = if self_x == other_x && self_y == other_y {
+                    combined[..32].copy_from_slice(&self_x);
+                    combined[32..].copy_from_slice(&self_y);
+                    double_u8_le(combined)
                 } else {
-                    add_u8_le(self_x, self_y, other_x, other_y)
+                    combined[..32].copy_from_slice(&self_x);
+                    combined[32..].copy_from_slice(&self_y);
+
+                    let mut combined_other: [u8; 64] = [0; 64];
+                    combined_other[..32].copy_from_slice(&other_x);
+                    combined_other[32..].copy_from_slice(&other_y);
+
+                    add_u8_le(combined, combined_other)
                 };
+                let (res_x, res_y) = result.split_at(32);
 
                 let mut res = *self;
-                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                res.x = FieldElement::from_bytes_unchecked_le(
+                    &res_x.try_into().expect("Expected 32 bytes"),
+                );
+                res.y = FieldElement::from_bytes_unchecked_le(
+                    &res_y.try_into().expect("Expected 32 bytes"),
+                );
                 return res;
             }
         }
@@ -295,10 +325,22 @@ impl ProjectivePoint {
                 // z being ONE means value is not identity
                 let self_x: [u8; 32] = self.x.to_bytes_le().into();
                 let self_y: [u8; 32] = self.y.to_bytes_le().into();
-                let (res_x, res_y) = double_u8_le(self_x, self_y);
+
+                let result = {
+                    let mut combined: [u8; 64] = [0; 64];
+                    combined[..32].copy_from_slice(&self_x);
+                    combined[32..].copy_from_slice(&self_y);
+                    double_u8_le(combined)
+                };
+                let (res_x, res_y) = result.split_at(32);
+
                 let mut res = *self;
-                res.x = FieldElement::from_bytes_unchecked_le(&res_x);
-                res.y = FieldElement::from_bytes_unchecked_le(&res_y);
+                res.x = FieldElement::from_bytes_unchecked_le(
+                    &res_x.try_into().expect("Expected 32 bytes"),
+                );
+                res.y = FieldElement::from_bytes_unchecked_le(
+                    &res_y.try_into().expect("Expected 32 bytes"),
+                );
                 return res;
             }
 
