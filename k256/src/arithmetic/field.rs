@@ -122,6 +122,11 @@ impl FieldElement {
         self.0.normalize().to_bytes_le()
     }
 
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub fn write_bytes_le(&self, out: &mut [u8; 32]) {
+        self.0.normalize().write_bytes_le(out);
+    }
+
     /// Convert a `i64` to a field element.
     /// Returned value may be only weakly normalized.
     #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
