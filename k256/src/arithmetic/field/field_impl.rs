@@ -110,6 +110,12 @@ impl FieldElementImpl {
         self.value.to_bytes_le()
     }
 
+    #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
+    pub fn write_bytes_le(self, out: &mut [u8; 32]) {
+        debug_assert!(self.normalized);
+        self.value.write_bytes_le(out)
+    }
+
     pub fn normalize_weak(&self) -> Self {
         Self::new_weak_normalized(&self.value.normalize_weak())
     }

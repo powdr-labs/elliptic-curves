@@ -918,8 +918,8 @@ checksum = "7170ef9988bc169ba16dd36a7fa041e5c4cbeb6a35b76d4c03daded371eae7c0"
 
 [[package]]
 name = "powdr-riscv-runtime"
-version = "0.1.0-alpha.2"
-source = "git+https://github.com/powdr-labs/powdr.git?tag=v0.1.1#699b74ac5b032113270a2f419ef192bdb7fc0857"
+version = "0.1.3"
+source = "git+https://github.com/powdr-labs/powdr.git?branch=main#4f1aa4a5f3879e974f8f668b728a8f7eb656b528"
 dependencies = [
  "getrandom",
  "powdr-riscv-syscalls",
@@ -929,8 +929,8 @@ dependencies = [
 
 [[package]]
 name = "powdr-riscv-syscalls"
-version = "0.1.1"
-source = "git+https://github.com/powdr-labs/powdr.git?tag=v0.1.1#699b74ac5b032113270a2f419ef192bdb7fc0857"
+version = "0.1.3"
+source = "git+https://github.com/powdr-labs/powdr.git?branch=main#4f1aa4a5f3879e974f8f668b728a8f7eb656b528"
 
 [[package]]
 name = "ppv-lite86"
