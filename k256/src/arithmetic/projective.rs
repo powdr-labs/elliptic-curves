@@ -105,23 +105,23 @@ impl ProjectivePoint {
                 let mut combined_other: [u8; 64] = [0; 64];
 
                 // z being ONE means value is not identity
-                self.x.as_bytes_le_mut(
+                self.x.write_bytes_le(
                     (&mut combined_self[..32])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
-                self.y.as_bytes_le_mut(
+                self.y.write_bytes_le(
                     (&mut combined_self[32..])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
 
-                other.x.as_bytes_le_mut(
+                other.x.write_bytes_le(
                     (&mut combined_other[..32])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
-                other.y.as_bytes_le_mut(
+                other.y.write_bytes_le(
                     (&mut combined_other[32..])
                         .try_into()
                         .expect("Expected 32 bytes"),
@@ -232,23 +232,23 @@ impl ProjectivePoint {
                 let mut combined_other: [u8; 64] = [0; 64];
 
                 // z being ONE means value is not identity
-                self.x.as_bytes_le_mut(
+                self.x.write_bytes_le(
                     (&mut combined_self[..32])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
-                self.y.as_bytes_le_mut(
+                self.y.write_bytes_le(
                     (&mut combined_self[32..])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
 
-                other.x.as_bytes_le_mut(
+                other.x.write_bytes_le(
                     (&mut combined_other[..32])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
-                other.y.as_bytes_le_mut(
+                other.y.write_bytes_le(
                     (&mut combined_other[32..])
                         .try_into()
                         .expect("Expected 32 bytes"),
@@ -346,12 +346,12 @@ impl ProjectivePoint {
                 let mut combined_self: [u8; 64] = [0; 64];
 
                 // z being ONE means value is not identity
-                self.x.as_bytes_le_mut(
+                self.x.write_bytes_le(
                     (&mut combined_self[..32])
                         .try_into()
                         .expect("Expected 32 bytes"),
                 );
-                self.y.as_bytes_le_mut(
+                self.y.write_bytes_le(
                     (&mut combined_self[32..])
                         .try_into()
                         .expect("Expected 32 bytes"),

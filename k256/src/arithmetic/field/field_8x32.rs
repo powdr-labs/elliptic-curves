@@ -83,6 +83,11 @@ impl FieldElement8x32 {
         self.0.to_le_byte_array()
     }
 
+    pub fn write_bytes_le(self, out: &mut [u8; 32]) {
+        let bytes = self.0.to_le_byte_array();
+        out.copy_from_slice(&bytes);
+    }
+
     /// Checks if the field element is greater or equal to the modulus.
     fn get_overflow(&self) -> Choice {
         let (_, carry) = self.0.adc(&MODULUS_CORRECTION, Limb(0));
