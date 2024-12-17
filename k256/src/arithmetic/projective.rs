@@ -101,26 +101,36 @@ impl ProjectivePoint {
         {
             // call when the values are normalized, into powdr ec operations
             if self.z == FieldElement::ONE && other.z == FieldElement::ONE {
+                let mut combined_self: [u8; 64] = [0; 64];
+                let mut combined_other: [u8; 64] = [0; 64];
+
                 // z being ONE means value is not identity
-                let self_x: [u8; 32] = self.x.to_bytes_le().into();
-                let self_y: [u8; 32] = self.y.to_bytes_le().into();
-                let other_x: [u8; 32] = other.x.to_bytes_le().into();
-                let other_y: [u8; 32] = other.y.to_bytes_le().into();
+                self.x.as_bytes_le_mut(
+                    (&mut combined_self[..32])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+                self.y.as_bytes_le_mut(
+                    (&mut combined_self[32..])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
 
-                let mut combined: [u8; 64] = [0; 64];
-                let result = if self_x == other_x && self_y == other_y {
-                    combined[..32].copy_from_slice(&self_x);
-                    combined[32..].copy_from_slice(&self_y);
-                    double_u8_le(combined)
+                other.x.as_bytes_le_mut(
+                    (&mut combined_other[..32])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+                other.y.as_bytes_le_mut(
+                    (&mut combined_other[32..])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+
+                let result = if combined_self == combined_other {
+                    double_u8_le(combined_self)
                 } else {
-                    combined[..32].copy_from_slice(&self_x);
-                    combined[32..].copy_from_slice(&self_y);
-
-                    let mut combined_other: [u8; 64] = [0; 64];
-                    combined_other[..32].copy_from_slice(&other_x);
-                    combined_other[32..].copy_from_slice(&other_y);
-
-                    add_u8_le(combined, combined_other)
+                    add_u8_le(combined_self, combined_other)
                 };
                 let (res_x, res_y) = result.split_at(32);
 
@@ -218,27 +228,38 @@ impl ProjectivePoint {
             if other.is_identity().into() {
                 return *self;
             } else if self.z == FieldElement::ONE {
+                let mut combined_self: [u8; 64] = [0; 64];
+                let mut combined_other: [u8; 64] = [0; 64];
+
                 // z being ONE means value is not identity
-                let self_x: [u8; 32] = self.x.to_bytes_le().into();
-                let self_y: [u8; 32] = self.y.to_bytes_le().into();
-                let other_x: [u8; 32] = other.x.to_bytes_le().into();
-                let other_y: [u8; 32] = other.y.to_bytes_le().into();
+                self.x.as_bytes_le_mut(
+                    (&mut combined_self[..32])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+                self.y.as_bytes_le_mut(
+                    (&mut combined_self[32..])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
 
-                let mut combined: [u8; 64] = [0; 64];
-                let result = if self_x == other_x && self_y == other_y {
-                    combined[..32].copy_from_slice(&self_x);
-                    combined[32..].copy_from_slice(&self_y);
-                    double_u8_le(combined)
+                other.x.as_bytes_le_mut(
+                    (&mut combined_other[..32])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+                other.y.as_bytes_le_mut(
+                    (&mut combined_other[32..])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+
+                let result = if combined_self == combined_other {
+                    double_u8_le(combined_self)
                 } else {
-                    combined[..32].copy_from_slice(&self_x);
-                    combined[32..].copy_from_slice(&self_y);
-
-                    let mut combined_other: [u8; 64] = [0; 64];
-                    combined_other[..32].copy_from_slice(&other_x);
-                    combined_other[32..].copy_from_slice(&other_y);
-
-                    add_u8_le(combined, combined_other)
+                    add_u8_le(combined_self, combined_other)
                 };
+
                 let (res_x, res_y) = result.split_at(32);
 
                 let mut res = *self;
@@ -322,16 +343,21 @@ impl ProjectivePoint {
         #[cfg(all(target_os = "zkvm", target_arch = "riscv32"))]
         {
             if self.z == FieldElement::ONE {
-                // z being ONE means value is not identity
-                let self_x: [u8; 32] = self.x.to_bytes_le().into();
-                let self_y: [u8; 32] = self.y.to_bytes_le().into();
+                let mut combined_self: [u8; 64] = [0; 64];
 
-                let result = {
-                    let mut combined: [u8; 64] = [0; 64];
-                    combined[..32].copy_from_slice(&self_x);
-                    combined[32..].copy_from_slice(&self_y);
-                    double_u8_le(combined)
-                };
+                // z being ONE means value is not identity
+                self.x.as_bytes_le_mut(
+                    (&mut combined_self[..32])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+                self.y.as_bytes_le_mut(
+                    (&mut combined_self[32..])
+                        .try_into()
+                        .expect("Expected 32 bytes"),
+                );
+
+                let result = double_u8_le(combined_self);
                 let (res_x, res_y) = result.split_at(32);
 
                 let mut res = *self;
